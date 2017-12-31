@@ -163,6 +163,7 @@ private:
     HANDLE                  m_hShot;
 
     // Save folder
+	//std::string                   m_cSaveFolder;
     WCHAR                   m_cSaveFolder[MAX_PATH];
     WCHAR                   m_cModelFolder[MAX_PATH];
 
@@ -297,4 +298,7 @@ private:
     /// Reset record parameters
     /// </summary>
     void                    ResetRecordParameters();
+
+
+	void getTimeString(WCHAR *wstr);
 };

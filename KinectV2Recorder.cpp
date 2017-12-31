@@ -14,6 +14,8 @@
 #include <vector>
 #include <queue>
 
+#include <ctime>
+#include <string>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include "opencv2/imgproc/imgproc.hpp"
@@ -513,8 +515,15 @@ void CKinectV2Recorder::InitializeUIControls()
     SendDlgItemMessage(m_hWnd, IDC_BUTTON_SHOT, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)m_hShot);
 
     // Set sfolder
-    StringCchPrintf(m_cModelFolder, _countof(m_cModelFolder), L"2D");
-    StringCchPrintf(m_cSaveFolder, _countof(m_cSaveFolder), L"2D//wi_tr_1");
+	getTimeString(m_cModelFolder);
+    //StringCchPrintf(m_cModelFolder, _countof(m_cModelFolder), L"2D");
+	getTimeString(m_cSaveFolder);
+	MessageBox(NULL,
+		m_cSaveFolder,
+		L"Frames already existed",
+		MB_OK | MB_ICONERROR
+	);
+    //StringCchPrintf(m_cSaveFolder, _countof(m_cSaveFolder), L"2D//wi_tr_1");
 }
 
 /// <summary>
@@ -595,7 +604,7 @@ void CKinectV2Recorder::ProcessUI(WPARAM wParam, LPARAM)
     }
     // Set save folder
 
-    if (m_bSelect2D)
+ /*   if (m_bSelect2D)
     {
         StringCchPrintf(m_cModelFolder, _countof(m_cModelFolder), L"2D");
         switch (m_nModel2DIndex)
@@ -650,7 +659,7 @@ void CKinectV2Recorder::ProcessUI(WPARAM wParam, LPARAM)
         case 2: StringCchPrintf(m_cSaveFolder, _countof(m_cSaveFolder), L"%s_b", m_cSaveFolder); break;
         case 3: StringCchPrintf(m_cSaveFolder, _countof(m_cSaveFolder), L"%s_r", m_cSaveFolder); break;
         }
-    }
+    }*/
     WCHAR szStatusMessage[128];
     StringCchPrintf(szStatusMessage, _countof(szStatusMessage), L" Save Folder: %s    FPS(Infrared, Depth, Color) = (%0.2f,  %0.2f,  %0.2f)", m_cSaveFolder, m_fInfraredFPS, m_fDepthFPS, m_fColorFPS);
     SetStatusMessage(szStatusMessage, 500, true);
@@ -950,6 +959,13 @@ void CKinectV2Recorder::ProcessInfrared(INT64 nTime, const UINT16* pBuffer, int 
                         L"Frames already existed",
                         MB_OK | MB_ICONERROR
                         );
+
+					MessageBox(NULL,
+						m_cSaveFolder,
+						L"Frames already existed",
+						MB_OK | MB_ICONERROR
+					);
+					
                     m_bRecord = false;
                     SendDlgItemMessage(m_hWnd, IDC_BUTTON_RECORD, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)m_hRecord);
                     return;
@@ -1435,6 +1451,7 @@ HRESULT CKinectV2Recorder::SaveToPNG_depth(
 	Mat image;
 	cv::resize(image_ori, image, cv::Size(640, 480));
 	imwrite(strFilePath, image);
+	return S_OK;
 }
 
 /// <summary>
@@ -1505,9 +1522,11 @@ void CKinectV2Recorder::SaveRecordImages()
 {
     while (!m_bStopThread)
     {
-        bool bInfraredWrite = !m_qInfraredFrameQueue.empty();
-        bool bDepthWrite = !m_qDepthFrameQueue.empty();
-        bool bColorWrite = !m_qColorFrameQueue.empty();
+		bool bInfraredWrite = !m_qInfraredFrameQueue.empty();
+		bool bDepthWrite = !m_qDepthFrameQueue.empty();
+		bool bColorWrite = !m_qColorFrameQueue.empty();
+
+		
 
         // Check if the necessary directories exist
         if ((bInfraredWrite || bDepthWrite || bColorWrite))
@@ -1724,6 +1743,29 @@ void CKinectV2Recorder::ResetRecordParameters()
     m_vColorList.resize(0);
     m_nStartTime = 0;
     
-
+	getTimeString(m_cSaveFolder);
     SendDlgItemMessage(m_hWnd, IDC_BUTTON_RECORD, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)m_hRecord);
+}
+
+
+
+
+void CKinectV2Recorder::getTimeString(WCHAR *wstr)
+{
+	time_t now = time(0);
+	tm *ltm = localtime(&now);
+	char buffer[50];
+	int year = 1990 + ltm->tm_year;
+	int month = ltm->tm_mon;
+	int day = ltm->tm_mday;
+	int hour = ltm->tm_hour;
+	int minute = ltm->tm_min;
+	int sec = ltm->tm_sec;
+	size_t n = sprintf(buffer, "%d_%d_%d_%d%d%d", year, month, day, hour, minute, sec);
+
+
+	const size_t cSize = strlen(buffer) + 1;
+	//wchar_t* wc = new wchar_t[cSize];
+	size_t tmp = 0;
+	mbstowcs_s(&tmp, wstr, cSize, buffer, cSize);
 }

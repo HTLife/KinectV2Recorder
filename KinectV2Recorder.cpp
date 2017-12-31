@@ -518,11 +518,7 @@ void CKinectV2Recorder::InitializeUIControls()
 	getTimeString(m_cModelFolder);
     //StringCchPrintf(m_cModelFolder, _countof(m_cModelFolder), L"2D");
 	getTimeString(m_cSaveFolder);
-	MessageBox(NULL,
-		m_cSaveFolder,
-		L"Frames already existed",
-		MB_OK | MB_ICONERROR
-	);
+
     //StringCchPrintf(m_cSaveFolder, _countof(m_cSaveFolder), L"2D//wi_tr_1");
 }
 
@@ -1322,8 +1318,15 @@ HRESULT CKinectV2Recorder::SaveToPNG(BYTE* pBitmapBits, LONG lWidth, LONG lHeigh
 	std::string strFilePath(gszFile);
 
 	Mat image_ori = Mat(lHeight, lWidth, CV_8UC3, pBitmapBits);
+	//Mat image;
+	//cv::resize(image_ori, image, cv::Size(640, 480));
+
+	cv::Rect myROI((cColorWidth / 2) - (640/2), (cColorHeight/2)-(480/2), 640, 480);
+	cv::Mat croppedImage = image_ori(myROI);
+
 	Mat image;
-	cv::resize(image_ori, image, cv::Size(640, 480));
+	cv::cvtColor(croppedImage, image, CV_BGR2RGB);
+
 	imwrite(strFilePath, image);
 
 	/*
@@ -1448,9 +1451,10 @@ HRESULT CKinectV2Recorder::SaveToPNG_depth(
 	std::string strFilePath(gszFile);
 
 	Mat image_ori = Mat(lHeight, lWidth, CV_16UC1, pBitmapBits);
-	Mat image;
-	cv::resize(image_ori, image, cv::Size(640, 480));
-	imwrite(strFilePath, image);
+	//Mat image;
+	//cv::resize(image_ori, image, cv::Size(640, 480));
+
+	imwrite(strFilePath, image_ori);
 	return S_OK;
 }
 

@@ -14,6 +14,11 @@
 #include <vector>
 #include <queue>
 
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+using namespace cv;
+
+
 #ifdef USE_IPP
 #include <ippi.h>
 #endif
@@ -1288,6 +1293,76 @@ HRESULT CKinectV2Recorder::SaveToBMP(BYTE* pBitmapBits, LONG lWidth, LONG lHeigh
     CloseHandle(hFile);
     return S_OK;
 }
+
+HRESULT CKinectV2Recorder::SaveToPNG(BYTE* pBitmapBits, LONG lWidth, LONG lHeight, WORD wBitsPerPixel, LPCWSTR lpszFilePath)
+{
+	// Convert LPCWSTR lpszFilePath to char
+	size_t origsize = wcslen(lpszFilePath) + 1;
+	size_t convertedChars = 0;
+	char gszFile[100] = { 0 };
+	wcstombs_s(&convertedChars, gszFile, origsize, lpszFilePath, _TRUNCATE); //from wchar_t to char*
+	// Convert char to std::string
+	std::string strFilePath(gszFile);
+
+	Mat image;
+	imwrite(strFilePath, image);
+
+
+	DWORD dwByteCount = lWidth * lHeight * (wBitsPerPixel / 8);
+
+	BITMAPINFOHEADER bmpInfoHeader = { 0 };
+
+	bmpInfoHeader.biSize = sizeof(BITMAPINFOHEADER);  // Size of the header
+	bmpInfoHeader.biBitCount = wBitsPerPixel;             // Bit count
+	bmpInfoHeader.biCompression = BI_RGB;                    // Standard RGB, no compression
+	bmpInfoHeader.biWidth = lWidth;                    // Width in pixels
+	bmpInfoHeader.biHeight = -lHeight;                  // Height in pixels, negative indicates it's stored right-side-up
+	bmpInfoHeader.biPlanes = 1;                         // Default
+	bmpInfoHeader.biSizeImage = dwByteCount;               // Image size in bytes
+
+	BITMAPFILEHEADER bfh = { 0 };
+
+	bfh.bfType = 0x4D42;                                           // 'M''B', indicates bitmap
+	bfh.bfOffBits = bmpInfoHeader.biSize + sizeof(BITMAPFILEHEADER);  // Offset to the start of pixel data
+	bfh.bfSize = bfh.bfOffBits + bmpInfoHeader.biSizeImage;        // Size of image + headers
+
+																   // Create the file on disk to write to
+	HANDLE hFile = CreateFileW(lpszFilePath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+	// Return if error opening file
+	if (NULL == hFile)
+	{
+		return E_ACCESSDENIED;
+	}
+
+	DWORD dwBytesWritten = 0;
+
+	// Write the bitmap file header
+	if (!WriteFile(hFile, &bfh, sizeof(bfh), &dwBytesWritten, NULL))
+	{
+		CloseHandle(hFile);
+		return E_FAIL;
+	}
+
+	// Write the bitmap info header
+	if (!WriteFile(hFile, &bmpInfoHeader, sizeof(bmpInfoHeader), &dwBytesWritten, NULL))
+	{
+		CloseHandle(hFile);
+		return E_FAIL;
+	}
+
+	// Write the RGB Data
+	if (!WriteFile(hFile, pBitmapBits, bmpInfoHeader.biSizeImage, &dwBytesWritten, NULL))
+	{
+		CloseHandle(hFile);
+		return E_FAIL;
+	}
+
+	// Close the file
+	CloseHandle(hFile);
+	return S_OK;
+}
+
 
 /// <summary>
 /// Save passed in image data to disk as a pgm file

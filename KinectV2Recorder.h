@@ -243,6 +243,8 @@ private:
     /// <returns>indicates success or failure</returns>
     HRESULT                 SaveToBMP(BYTE* pBitmapBits, LONG lWidth, LONG lHeight, WORD wBitsPerPixel, LPCWSTR lpszFilePath);
 
+	HRESULT                 SaveToPNG(BYTE* pBitmapBits, LONG lWidth, LONG lHeight, WORD wBitsPerPixel, LPCWSTR lpszFilePath);
+
     /// <summary>
     /// Save passed in image data to disk as a PGM file
     /// </summary>

@@ -54,6 +54,7 @@ class CKinectV2Recorder
     static const int        cDepthHeight = 424;
     static const int        cColorWidth = 1920;
     static const int        cColorHeight = 1080;
+
 public:
     /// <summary>
     /// Constructor
@@ -256,6 +257,7 @@ private:
     /// <param name="lpszFilePath">full file path to output bitmap to</param>
     /// <returns>indicates success or failure</returns>
     HRESULT                 SaveToPGM(BYTE* pBitmapBits, LONG lWidth, LONG lHeight, WORD wBitsPerPixel, LONG lMaxPixel, LPCWSTR lpszFilePath);
+	HRESULT                 SaveToPNG_depth(BYTE* pBitmapBits, LONG lWidth, LONG lHeight, WORD wBitsPerPixel, LONG lMaxPixel, LPCWSTR lpszFilePath);
 
     /// <summary>
     /// Save passed in image data to disk as a PPM file

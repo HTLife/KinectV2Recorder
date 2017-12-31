@@ -16,6 +16,7 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include "opencv2/imgproc/imgproc.hpp"
 using namespace cv;
 
 
@@ -1304,10 +1305,12 @@ HRESULT CKinectV2Recorder::SaveToPNG(BYTE* pBitmapBits, LONG lWidth, LONG lHeigh
 	// Convert char to std::string
 	std::string strFilePath(gszFile);
 
+	Mat image_ori = Mat(lHeight, lWidth, CV_8UC3, pBitmapBits);
 	Mat image;
+	cv::resize(image_ori, image, cv::Size(640, 480));
 	imwrite(strFilePath, image);
 
-
+	/*
 	DWORD dwByteCount = lWidth * lHeight * (wBitsPerPixel / 8);
 
 	BITMAPINFOHEADER bmpInfoHeader = { 0 };
@@ -1359,7 +1362,7 @@ HRESULT CKinectV2Recorder::SaveToPNG(BYTE* pBitmapBits, LONG lWidth, LONG lHeigh
 	}
 
 	// Close the file
-	CloseHandle(hFile);
+	CloseHandle(hFile);*/
 	return S_OK;
 }
 
@@ -1410,6 +1413,28 @@ HRESULT CKinectV2Recorder::SaveToPGM(BYTE* pBitmapBits, LONG lWidth, LONG lHeigh
     // Close the file
     CloseHandle(hFile);
     return S_OK;
+}
+
+HRESULT CKinectV2Recorder::SaveToPNG_depth(
+	BYTE* pBitmapBits, 
+	LONG lWidth, 
+	LONG lHeight, 
+	WORD wBitsPerPixel, 
+	LONG lMaxPixel, 
+	LPCWSTR lpszFilePath)
+{
+	// Convert LPCWSTR lpszFilePath to char
+	size_t origsize = wcslen(lpszFilePath) + 1;
+	size_t convertedChars = 0;
+	char gszFile[100] = { 0 };
+	wcstombs_s(&convertedChars, gszFile, origsize, lpszFilePath, _TRUNCATE); //from wchar_t to char*
+																			 // Convert char to std::string
+	std::string strFilePath(gszFile);
+
+	Mat image_ori = Mat(lHeight, lWidth, CV_16UC1, pBitmapBits);
+	Mat image;
+	cv::resize(image_ori, image, cv::Size(640, 480));
+	imwrite(strFilePath, image);
 }
 
 /// <summary>
@@ -1508,10 +1533,10 @@ void CKinectV2Recorder::SaveRecordImages()
             }
 
             INT64 nTime = m_qInfraredTimeQueue.front();
-            StringCchPrintfW(szSavePath, _countof(szSavePath), L"%s\\%011.6f.pgm", szSavePath, nTime / 10000000.);
-
-            SaveToPGM(reinterpret_cast<BYTE*>(m_qInfraredFrameQueue.front()), cInfraredWidth, cInfraredHeight, sizeof(UINT16)* 8, 65535, szSavePath);
-           
+            //StringCchPrintfW(szSavePath, _countof(szSavePath), L"%s\\%011.6f.pgm", szSavePath, nTime / 10000000.);
+			StringCchPrintfW(szSavePath, _countof(szSavePath), L"%s\\%011.6f.png", szSavePath, nTime / 10000000.);
+            //SaveToPGM(reinterpret_cast<BYTE*>(m_qInfraredFrameQueue.front()), cInfraredWidth, cInfraredHeight, sizeof(UINT16)* 8, 65535, szSavePath);
+			SaveToPNG_depth(reinterpret_cast<BYTE*>(m_qInfraredFrameQueue.front()), cInfraredWidth, cInfraredHeight, sizeof(UINT16) * 8, 65535, szSavePath);
             m_vInfraredList.push_back(nTime);
 
             m_qInfraredTimeQueue.pop();
@@ -1529,9 +1554,10 @@ void CKinectV2Recorder::SaveRecordImages()
             }
 
             INT64 nTime = m_qDepthTimeQueue.front();
-            StringCchPrintfW(szSavePath, _countof(szSavePath), L"%s\\%011.6f.pgm", szSavePath, nTime / 10000000.);
-
-            SaveToPGM(reinterpret_cast<BYTE*>(m_qDepthFrameQueue.front()), cDepthWidth, cDepthHeight, sizeof(UINT16)* 8, 65535, szSavePath);
+            //StringCchPrintfW(szSavePath, _countof(szSavePath), L"%s\\%011.6f.pgm", szSavePath, nTime / 10000000.);
+			StringCchPrintfW(szSavePath, _countof(szSavePath), L"%s\\%011.6f.png", szSavePath, nTime / 10000000.);
+            //SaveToPGM(reinterpret_cast<BYTE*>(m_qDepthFrameQueue.front()), cDepthWidth, cDepthHeight, sizeof(UINT16)* 8, 65535, szSavePath);
+			SaveToPNG_depth(reinterpret_cast<BYTE*>(m_qDepthFrameQueue.front()), cDepthWidth, cDepthHeight, sizeof(UINT16) * 8, 65535, szSavePath);
 
             m_vDepthList.push_back(nTime);
 
@@ -1554,8 +1580,10 @@ void CKinectV2Recorder::SaveRecordImages()
             StringCchPrintfW(szSavePath, _countof(szSavePath), L"%s\\%011.6f.bmp", szSavePath, nTime / 10000000.);
             SaveToBMP(reinterpret_cast<BYTE*>(m_qColorFrameQueue.front()), cColorWidth, cColorHeight, sizeof(RGBTRIPLE)* 8, szSavePath);
 #else
-            StringCchPrintfW(szSavePath, _countof(szSavePath), L"%s\\%011.6f.ppm", szSavePath, nTime / 10000000.);
-            SaveToPPM(reinterpret_cast<BYTE*>(m_qColorFrameQueue.front()), cColorWidth, cColorHeight, sizeof(RGBTRIPLE)* 8, 255, szSavePath);
+            //StringCchPrintfW(szSavePath, _countof(szSavePath), L"%s\\%011.6f.ppm", szSavePath, nTime / 10000000.);
+            //SaveToPPM(reinterpret_cast<BYTE*>(m_qColorFrameQueue.front()), cColorWidth, cColorHeight, sizeof(RGBTRIPLE)* 8, 255, szSavePath);
+			StringCchPrintfW(szSavePath, _countof(szSavePath), L"%s\\%011.6f.png", szSavePath, nTime / 10000000.);
+			SaveToPNG(reinterpret_cast<BYTE*>(m_qColorFrameQueue.front()), cColorWidth, cColorHeight, sizeof(RGBTRIPLE) * 8, szSavePath);
 #endif
             m_vColorList.push_back(nTime);
 
@@ -1596,8 +1624,10 @@ void CKinectV2Recorder::SaveShotImages()
             CreateDirectory(szInfraredFolder, NULL);
         }
         WCHAR szInfraredPath[MAX_PATH];
-        StringCchPrintfW(szInfraredPath, _countof(szInfraredPath), L"%s\\%s.pgm", szInfraredFolder, FileName);
-        SaveToPGM(reinterpret_cast<BYTE*>(m_pInfraredUINT16[0]), cInfraredWidth, cInfraredHeight, sizeof(UINT16)* 8, 65535, szInfraredPath);
+        //StringCchPrintfW(szInfraredPath, _countof(szInfraredPath), L"%s\\%s.pgm", szInfraredFolder, FileName);
+		StringCchPrintfW(szInfraredPath, _countof(szInfraredPath), L"%s\\%s.png", szInfraredFolder, FileName);
+        //SaveToPGM(reinterpret_cast<BYTE*>(m_pInfraredUINT16[0]), cInfraredWidth, cInfraredHeight, sizeof(UINT16)* 8, 65535, szInfraredPath);
+		SaveToPNG_depth(reinterpret_cast<BYTE*>(m_pInfraredUINT16[0]), cInfraredWidth, cInfraredHeight, sizeof(UINT16) * 8, 65535, szInfraredPath);
 
         // Save depth image
         StringCchPrintfW(szDepthFolder, _countof(szDepthFolder), L"%s\\depth", szCalibrationFolder);
@@ -1606,8 +1636,10 @@ void CKinectV2Recorder::SaveShotImages()
             CreateDirectory(szDepthFolder, NULL);
         }
         WCHAR szDepthPath[MAX_PATH];
-        StringCchPrintfW(szDepthPath, _countof(szDepthPath), L"%s\\%s.pgm", szDepthFolder, FileName);
-        SaveToPGM(reinterpret_cast<BYTE*>(m_pDepthUINT16[0]), cDepthWidth, cDepthHeight, sizeof(UINT16)* 8, 65535, szDepthPath);
+        //StringCchPrintfW(szDepthPath, _countof(szDepthPath), L"%s\\%s.pgm", szDepthFolder, FileName);
+		StringCchPrintfW(szDepthPath, _countof(szDepthPath), L"%s\\%s.png", szDepthFolder, FileName);
+        //SaveToPGM(reinterpret_cast<BYTE*>(m_pDepthUINT16[0]), cDepthWidth, cDepthHeight, sizeof(UINT16)* 8, 65535, szDepthPath);
+		SaveToPNG_depth(reinterpret_cast<BYTE*>(m_pDepthUINT16[0]), cDepthWidth, cDepthHeight, sizeof(UINT16) * 8, 65535, szDepthPath);
     
         // Save Color image
         StringCchPrintfW(szColorFolder, _countof(szColorFolder), L"%s\\color", szCalibrationFolder);

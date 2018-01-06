@@ -1760,7 +1760,7 @@ void CKinectV2Recorder::getTimeString(WCHAR *wstr)
 	tm *ltm = localtime(&now);
 	char buffer[50];
 	int year = 1990 + ltm->tm_year;
-	int month = ltm->tm_mon;
+	int month = ltm->tm_mon + 1;
 	int day = ltm->tm_mday;
 	int hour = ltm->tm_hour;
 	int minute = ltm->tm_min;

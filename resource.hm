@@ -1,0 +1,4 @@
+// Microsoft Visual C++ generated Help ID include file.
+// Used by KinectV2Recorder.rc
+//
+#define HIDC_2D3D_GROUPBOX              0x806e03ec    // IDD_APP [English (United States)]

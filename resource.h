@@ -1,10 +1,3 @@
-// resource.h
-//
-// Author: Po-Chen Wu (pcwu0329@gmail.com)
-//
-// These codes are written mainly based on codes from Kinect for Windows SDK 2.0
-// https://www.microsoft.com/en-us/download/details.aspx?id=44561
-
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
 // Used by KinectV2Recorder.rc
@@ -31,6 +24,7 @@
 #define IDC_STATUS                      1015
 #define IDC_BUTTON_RECORD               1016
 #define IDC_BUTTON_SHOT                 1017
+
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED

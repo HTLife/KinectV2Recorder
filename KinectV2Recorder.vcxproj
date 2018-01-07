@@ -24,6 +24,10 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="app.ico" />
+    <Image Include="icon\app.ico" />
+    <Image Include="icon\record.ico" />
+    <Image Include="icon\shot.ico" />
+    <Image Include="icon\stop.ico" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KinectV2Recorder.rc" />
@@ -34,6 +38,9 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="unistd.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resource.hm" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{25D068F1-4D71-4EC2-BA78-8F6C694101A5}</ProjectGuid>

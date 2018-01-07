@@ -1684,7 +1684,7 @@ void CKinectV2Recorder::GetIMUData()
 
 	MessageBox(NULL,
 		iniContent,//L"Frame dropping occured...\n",
-		L"IMU info",
+		L"IMU info load from setting.ini",
 		MB_OK 
 	);
 

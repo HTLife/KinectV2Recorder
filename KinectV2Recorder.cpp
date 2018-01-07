@@ -19,8 +19,17 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include "opencv2/imgproc/imgproc.hpp"
-using namespace cv;
 
+
+
+#include "mscl/Communication/Connection.h"
+#include "mscl/MicroStrain/Inertial/InertialNode.h"
+#include "mscl/Exceptions.h"
+
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+
+#include <fstream>
 
 #ifdef USE_IPP
 #include <ippi.h>
@@ -86,7 +95,10 @@ m_nTypeIndex(0),
 m_nLevelIndex(0),
 m_nSideIndex(0),
 m_tSaveThread(),
-m_bStopThread(false)
+m_bStopThread(false),
+m_tSaveThreadIMU(),
+m_bStopThreadIMU(false),
+m_myfile(NULL)
 {
     LARGE_INTEGER qpf = { 0 };
     if (QueryPerformanceFrequency(&qpf))
@@ -207,6 +219,9 @@ CKinectV2Recorder::~CKinectV2Recorder()
 
     m_bStopThread = true;
     if (m_tSaveThread.joinable()) m_tSaveThread.join();
+
+	m_bStopThreadIMU = true;
+	if (m_tSaveThreadIMU.joinable()) m_tSaveThreadIMU.join();
 }
 
 /// <summary>
@@ -243,6 +258,7 @@ int CKinectV2Recorder::Run(HINSTANCE hInstance, int nCmdShow)
 
     // Show window
     ShowWindow(hWndApp, nCmdShow);
+	StartThreadIMU();
 
     // Main message loop
     while (WM_QUIT != msg.message)
@@ -271,6 +287,11 @@ int CKinectV2Recorder::Run(HINSTANCE hInstance, int nCmdShow)
 void CKinectV2Recorder::StartMultithreading()
 {
     m_tSaveThread = std::thread(&CKinectV2Recorder::SaveRecordImages, this);
+}
+
+void CKinectV2Recorder::StartThreadIMU()
+{
+	m_tSaveThreadIMU = std::thread(&CKinectV2Recorder::GetIMUData, this);
 }
 
 /// <summary>
@@ -669,6 +690,9 @@ void CKinectV2Recorder::ProcessUI(WPARAM wParam, LPARAM)
             CheckImages();
 #endif
             ResetRecordParameters();
+
+			fclose(m_myfile);
+			m_myfile = NULL;
         }
         else
         {
@@ -919,10 +943,10 @@ void CKinectV2Recorder::ProcessInfrared(INT64 nTime, const UINT16* pBuffer, int 
                 intensityRatio /= InfraredSceneValueAverage * InfraredSceneStandardDeviations;
 
                 // 3. limiting the value to InfraredOutputValueMaximum
-                intensityRatio = min(InfraredOutputValueMaximum, intensityRatio);
+                intensityRatio = cv::min(InfraredOutputValueMaximum, intensityRatio);
 
                 // 4. limiting the lower value InfraredOutputValueMinimym
-                intensityRatio = max(InfraredOutputValueMinimum, intensityRatio);
+                intensityRatio = cv::max(InfraredOutputValueMinimum, intensityRatio);
 
                 // 5. converting the normalized value to a byte and using the result
                 // as the RGB components required by the image
@@ -1317,14 +1341,14 @@ HRESULT CKinectV2Recorder::SaveToPNG(BYTE* pBitmapBits, LONG lWidth, LONG lHeigh
 	// Convert char to std::string
 	std::string strFilePath(gszFile);
 
-	Mat image_ori = Mat(lHeight, lWidth, CV_8UC3, pBitmapBits);
+	cv::Mat image_ori = cv::Mat(lHeight, lWidth, CV_8UC3, pBitmapBits);
 	//Mat image;
 	//cv::resize(image_ori, image, cv::Size(640, 480));
 
 	cv::Rect myROI((cColorWidth / 2) - (640/2), (cColorHeight/2)-(480/2), 640, 480);
 	cv::Mat croppedImage = image_ori(myROI);
 
-	Mat image;
+	cv::Mat image;
 	cv::cvtColor(croppedImage, image, CV_BGR2RGB);
 
 	imwrite(strFilePath, image);
@@ -1450,11 +1474,11 @@ HRESULT CKinectV2Recorder::SaveToPNG_depth(
 																			 // Convert char to std::string
 	std::string strFilePath(gszFile);
 
-	Mat image_ori = Mat(lHeight, lWidth, CV_16UC1, pBitmapBits);
+	cv::Mat image_ori = cv::Mat(lHeight, lWidth, CV_16UC1, pBitmapBits);
 	//Mat image;
 	//cv::resize(image_ori, image, cv::Size(640, 480));
 
-	imwrite(strFilePath, image_ori);
+	cv::imwrite(strFilePath, image_ori);
 	return S_OK;
 }
 
@@ -1588,8 +1612,26 @@ void CKinectV2Recorder::SaveRecordImages()
             m_qDepthFrameQueue.pop();
         }
 
+
+		
+
         if (bColorWrite)
         {
+			// Write IMU data
+			WCHAR szSavePathIMU[MAX_PATH];
+			StringCchPrintfW(szSavePathIMU, _countof(szSavePathIMU), L"%s\\imu", m_cSaveFolder);
+			if (!IsDirectoryExists(szSavePathIMU))
+			{
+				CreateDirectory(szSavePathIMU, NULL);
+			}
+			std::wstring ws(szSavePathIMU);
+			std::string strPath(ws.begin(), ws.end());
+			if (m_myfile == NULL)
+			{
+				std::string imuFilePath = strPath + "\\imu.txt";
+				m_myfile = fopen(imuFilePath.c_str(), "w+");
+			}
+
             WCHAR szSavePath[MAX_PATH];
             StringCchPrintfW(szSavePath, _countof(szSavePath), L"%s\\color", m_cSaveFolder);
 
@@ -1599,6 +1641,18 @@ void CKinectV2Recorder::SaveRecordImages()
             }
 
             INT64 nTime = m_qColorTimeQueue.front();
+			char buffer[50];
+			sprintf(buffer, "%011.6f", nTime / 10000000.);
+			std::string strTime(buffer);
+			
+
+			std::vector<double> IMUdata;
+			mtx.lock();
+			IMUdata.assign(m_IMUdata.begin(), m_IMUdata.end());
+			mtx.unlock();
+			
+			writeCSV(m_myfile, strTime, IMUdata);
+
 #ifdef COLOR_BMP
             StringCchPrintfW(szSavePath, _countof(szSavePath), L"%s\\%011.6f.bmp", szSavePath, nTime / 10000000.);
             SaveToBMP(reinterpret_cast<BYTE*>(m_qColorFrameQueue.front()), cColorWidth, cColorHeight, sizeof(RGBTRIPLE)* 8, szSavePath);
@@ -1614,8 +1668,74 @@ void CKinectV2Recorder::SaveRecordImages()
             m_qColorFrameQueue.pop();
         }
 
+		
+
         std::this_thread::sleep_for(std::chrono::microseconds(100));
     }
+}
+
+/// <summary>
+/// Get IMU Data
+/// </summary>
+void CKinectV2Recorder::GetIMUData()
+{
+	std::wstring stemp = s2ws(getIni("setting.ini", "IMU", "comport"));
+	LPCWSTR iniContent = stemp.c_str();
+
+	MessageBox(NULL,
+		iniContent,//L"Frame dropping occured...\n",
+		L"IMU info",
+		MB_OK 
+	);
+
+	//TODO: change these constants to match your setup
+	//std::string COM_PORT = "COM3";
+	std::string COM_PORT = getIni("setting.ini", "IMU", "comport");
+	try
+	{
+		//create a SerialConnection with the COM port
+		mscl::Connection connection = mscl::Connection::Serial(COM_PORT);
+
+		//create an InertialNode with the connection
+		mscl::InertialNode node(connection);
+
+		while (!m_bStopThreadIMU)
+		{
+			mscl::InertialDataPoints data; //typedef std::vector<InertialDataPoint> InertialDataPoints;
+			//get all the data packets from the node, with a timeout of 500 milliseconds
+			mscl::InertialDataPackets packets = node.getDataPackets(500);
+			
+			for (mscl::InertialDataPacket packet : packets)
+			{
+				data = packet.data();
+				
+
+				assert(data.size() == 6);
+
+				mtx.lock();// #########################lock
+				m_IMUdata.clear();
+				for(int i = 0; i < 6; i++)
+				{
+					m_IMUdata.push_back(data[i].as_double());
+				}
+				mtx.unlock();// #########################unlock
+			}
+		}
+	}
+	catch (mscl::Error& e)
+	{
+		std::string tmpstr(e.what());
+		std::string errmsg = "Error:" + tmpstr;
+
+		std::wstring stemp = s2ws(errmsg);
+		LPCWSTR result = stemp.c_str();
+
+		MessageBox(NULL,
+			result,//L"Frame dropping occured...\n",
+			L"No Good",
+			MB_OK | MB_ICONERROR
+		);
+	}
 }
 
 /// <summary>
@@ -1772,4 +1892,56 @@ void CKinectV2Recorder::getTimeString(WCHAR *wstr)
 	//wchar_t* wc = new wchar_t[cSize];
 	size_t tmp = 0;
 	mbstowcs_s(&tmp, wstr, cSize, buffer, cSize);
+}
+
+std::wstring CKinectV2Recorder::s2ws(const std::string& s)
+{
+	int len;
+	int slength = (int)s.length() + 1;
+	len = MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, 0, 0);
+	wchar_t* buf = new wchar_t[len];
+	MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, buf, len);
+	std::wstring r(buf);
+	delete[] buf;
+	return r;
+}
+
+std::string CKinectV2Recorder::getIni(
+	const std::string iniPath,
+	const std::string section,
+	const std::string key)
+{
+	// Get current working directory with execution file full path
+	WCHAR path[1000];
+	GetModuleFileNameW(NULL, path, 1000);
+
+	// Convert WCHAR to string
+	std::wstring ws(path);
+	std::string strPath;
+	strPath.assign(ws.begin(), ws.end());
+
+	// Get rid of execution file 
+	std::string::size_type pos = std::string(strPath).find_last_of("\\/");
+	strPath = std::string(strPath).substr(0, pos);
+
+	// Parse ini
+	boost::property_tree::ptree pt;
+	//boost::property_tree::ini_parser::read_ini(strPath + "\\setting.ini", pt);
+	boost::property_tree::ini_parser::read_ini(strPath + "\\" + iniPath, pt);
+	return pt.get<std::string>(section + "." + key);
+}
+
+void CKinectV2Recorder::writeCSV(
+	FILE* f, 
+	std::string time, 
+	std::vector<double> content)
+{
+	fprintf(f, "%s,%0.4f,%0.4f,%0.4f,%0.4f,%0.4f,%0.4f\n", 
+		time.c_str(), 
+		content.at(0),
+		content.at(1), 
+		content.at(2), 
+		content.at(3), 
+		content.at(4), 
+		content.at(5) );
 }

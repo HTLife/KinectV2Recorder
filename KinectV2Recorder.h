@@ -6,6 +6,9 @@
 // https://www.microsoft.com/en-us/download/details.aspx?id=44561
 
 
+
+
+
 #pragma once
 
 #include "resource.h"
@@ -14,6 +17,12 @@
 #include <vector>
 #include <queue>
 #include <fstream>
+
+#undef max //Prevent max macro in windows.h conflict with mscl
+#undef min //Prevent min macro in windows.h conflict with mscl
+#include "mscl/MicroStrain/Inertial/InertialDataPoint.h"
+
+#include <mutex>
 
 // InfraredSourceValueMaximum is the highest value that can be returned in the InfraredFrame.
 // It is cast to a float for readability in the visualization code.
@@ -97,6 +106,7 @@ public:
     /// Start multithreading
     /// </summary>
     void                    StartMultithreading();
+	void                    StartThreadIMU();
 private:
     HWND                    m_hWnd;
     INT64                   m_nStartTime;
@@ -171,10 +181,18 @@ private:
     std::thread             m_tSaveThread;
     bool                    m_bStopThread;
 
+	std::thread             m_tSaveThreadIMU;
+	bool                    m_bStopThreadIMU;
+
     // Check lists
     std::vector<INT64>      m_vInfraredList;
     std::vector<INT64>      m_vDepthList;
     std::vector<INT64>      m_vColorList;
+
+	// IMU
+	std::vector<double>     m_IMUdata;
+	std::mutex              mtx;           // mutex for critical section
+	FILE*			        m_myfile;
 
     /// <summary>
     /// Main processing function
@@ -284,6 +302,11 @@ private:
     /// </summary>
     void                    SaveRecordImages();
 
+	/// <summary>
+	/// Get IMU Data
+	/// </summary>
+	void                    GetIMUData();
+
     /// <summary>
     /// Save shot images
     /// </summary>
@@ -301,4 +324,8 @@ private:
 
 
 	void getTimeString(WCHAR *wstr);
+
+	std::wstring s2ws(const std::string& s);
+	std::string getIni(const std::string iniPath, const std::string section, const std::string key);
+	void writeCSV(FILE* f, std::string time, std::vector<double> content);
 };

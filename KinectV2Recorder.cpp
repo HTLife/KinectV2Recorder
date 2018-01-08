@@ -537,8 +537,8 @@ void CKinectV2Recorder::InitializeUIControls()
 
     // Set sfolder
 	getTimeString(m_cModelFolder);
+	wcscpy(m_cSaveFolder, m_cModelFolder);
     //StringCchPrintf(m_cModelFolder, _countof(m_cModelFolder), L"2D");
-	getTimeString(m_cSaveFolder);
 
     //StringCchPrintf(m_cSaveFolder, _countof(m_cSaveFolder), L"2D//wi_tr_1");
 }
@@ -1651,6 +1651,16 @@ void CKinectV2Recorder::SaveRecordImages()
 			IMUdata.assign(m_IMUdata.begin(), m_IMUdata.end());
 			mtx.unlock();
 			
+			assert(IMUData.size() == 6);
+			if (IMUdata.size() != 6)
+			{
+				MessageBox(NULL,
+					L"IMU incoming data incorrect.  Try to setup MIP monitor and press the blue 'play' button.",
+					L"Error",
+					MB_OK | MB_ICONERROR
+				);
+				exit(1);
+			}
 			writeCSV(m_myfile, strTime, IMUdata);
 
 #ifdef COLOR_BMP
@@ -1699,6 +1709,25 @@ void CKinectV2Recorder::GetIMUData()
 		//create an InertialNode with the connection
 		mscl::InertialNode node(connection);
 
+		//Put the Inertial Node into its idle state 
+		//  (This is not required but reduces the parsing 
+		//  burden during initialization and makes visual 
+		//  confirmation of the commands easier.)
+		node.setToIdle();
+
+		//build up the channels to set
+		mscl::InertialChannels sensorChs;
+
+		sensorChs.push_back(mscl::InertialChannel(mscl::InertialTypes::CH_FIELD_SENSOR_SCALED_ACCEL_VEC, mscl::SampleRate::Hertz(100)));
+
+		sensorChs.push_back(mscl::InertialChannel(mscl::InertialTypes::CH_FIELD_SENSOR_SCALED_GYRO_VEC, mscl::SampleRate::Hertz(100)));
+
+		//set the active channels for the Sensor category on the Node
+		node.setActiveChannelFields(mscl::InertialTypes::CATEGORY_SENSOR, sensorChs);
+
+		//start sampling on the Sensor category of the Node
+		node.enableDataStream(mscl::InertialTypes::CATEGORY_SENSOR);
+
 		while (!m_bStopThreadIMU)
 		{
 			mscl::InertialDataPoints data; //typedef std::vector<InertialDataPoint> InertialDataPoints;
@@ -1711,6 +1740,16 @@ void CKinectV2Recorder::GetIMUData()
 				
 
 				assert(data.size() == 6);
+				if (data.size() != 6)
+				{
+					MessageBox(NULL,
+						L"IMU incoming data incorrect.  Try to setup MIP monitor and press the blue 'play' button.",
+						L"Error",
+						MB_OK | MB_ICONERROR
+					);
+					exit(1);
+				}
+
 
 				mtx.lock();// #########################lock
 				m_IMUdata.clear();
@@ -1732,7 +1771,7 @@ void CKinectV2Recorder::GetIMUData()
 
 		MessageBox(NULL,
 			result,//L"Frame dropping occured...\n",
-			L"No Good",
+			L"Error",
 			MB_OK | MB_ICONERROR
 		);
 	}
@@ -1867,7 +1906,8 @@ void CKinectV2Recorder::ResetRecordParameters()
     m_vColorList.resize(0);
     m_nStartTime = 0;
     
-	getTimeString(m_cSaveFolder);
+	getTimeString(m_cModelFolder);
+	wcscpy(m_cSaveFolder, m_cModelFolder);
     SendDlgItemMessage(m_hWnd, IDC_BUTTON_RECORD, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)m_hRecord);
 }
 
@@ -1885,7 +1925,7 @@ void CKinectV2Recorder::getTimeString(WCHAR *wstr)
 	int hour = ltm->tm_hour;
 	int minute = ltm->tm_min;
 	int sec = ltm->tm_sec;
-	size_t n = sprintf(buffer, "%d_%d_%d_%d%d%d", year, month, day, hour, minute, sec);
+	size_t n = sprintf(buffer, "%d_%02d_%02d_%02d%02d%02d", year, month, day, hour, minute, sec);
 
 
 	const size_t cSize = strlen(buffer) + 1;
@@ -1927,7 +1967,22 @@ std::string CKinectV2Recorder::getIni(
 	// Parse ini
 	boost::property_tree::ptree pt;
 	//boost::property_tree::ini_parser::read_ini(strPath + "\\setting.ini", pt);
-	boost::property_tree::ini_parser::read_ini(strPath + "\\" + iniPath, pt);
+	try
+	{
+		boost::property_tree::ini_parser::read_ini(strPath + "\\" + iniPath, pt);
+	}
+	catch (const boost::property_tree::ptree_error &e)
+	{
+		std::wstring stemp = s2ws(e.what());
+		LPCWSTR error_msg = stemp.c_str();
+
+		MessageBox(NULL,
+			error_msg,//L"Frame dropping occured...\n",
+			L"IMU info load from setting.ini",
+			MB_OK | MB_ICONERROR
+		);
+		exit(1);
+	}
 	return pt.get<std::string>(section + "." + key);
 }
 

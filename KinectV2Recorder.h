@@ -196,6 +196,7 @@ private:
 	bool                    m_bIMUEnable;
 	int                     m_iRGBwidth;
 	int                     m_iRGBheight;
+	std::string             m_strMyDocumentPath;
 
     /// <summary>
     /// Main processing function
@@ -329,6 +330,7 @@ private:
 	void getTimeString(WCHAR *wstr);
 
 	std::wstring s2ws(const std::string& s);
+	std::string CKinectV2Recorder::WCHARtoString(WCHAR* c);
 	std::string getIni(const std::string iniPath, const std::string section, const std::string key);
 	void writeCSV(FILE* f, std::string time, std::vector<double> content);
 };

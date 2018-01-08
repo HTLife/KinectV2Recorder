@@ -31,6 +31,9 @@
 
 #include <fstream>
 
+#include <shlobj.h>//getting Document path under windows
+#pragma comment(lib, "shell32.lib")
+
 #ifdef USE_IPP
 #include <ippi.h>
 #endif
@@ -138,6 +141,17 @@ m_bIMUEnable(true)
 	
 	m_iRGBwidth = std::stoi(strWidth);
 	m_iRGBheight = std::stoi(strHeight);
+
+
+	// Get user specified path
+	m_strMyDocumentPath = getIni("setting.ini", "SYSTEM", "save_path");
+	if (m_strMyDocumentPath == "")
+	{
+		// Get user Document folder path
+		WCHAR my_documents[MAX_PATH];
+		HRESULT result = SHGetFolderPath(NULL, CSIDL_DESKTOP, NULL, SHGFP_TYPE_CURRENT, my_documents);
+		m_strMyDocumentPath = WCHARtoString(my_documents);
+	}
 
 }
 
@@ -1981,7 +1995,7 @@ void CKinectV2Recorder::getTimeString(WCHAR *wstr)
 	int hour = ltm->tm_hour;
 	int minute = ltm->tm_min;
 	int sec = ltm->tm_sec;
-	size_t n = sprintf(buffer, "%d_%02d_%02d_%02d%02d%02d", year, month, day, hour, minute, sec);
+	size_t n = sprintf(buffer, "%s\\KinectV2Recorder\\%d_%02d_%02d_%02d%02d%02d", m_strMyDocumentPath.c_str(), year, month, day, hour, minute, sec);
 
 
 	const size_t cSize = strlen(buffer) + 1;
@@ -2000,6 +2014,13 @@ std::wstring CKinectV2Recorder::s2ws(const std::string& s)
 	std::wstring r(buf);
 	delete[] buf;
 	return r;
+}
+
+std::string CKinectV2Recorder::WCHARtoString(WCHAR* c)
+{
+	std::wstring ws(c);
+	std::string strPath(ws.begin(), ws.end());
+	return strPath;
 }
 
 std::string CKinectV2Recorder::getIni(

@@ -21,3 +21,5 @@ reference
 *.db
 *.opendb
 *.aps
+
+installScript/Output/

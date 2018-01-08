@@ -132,6 +132,13 @@ m_bIMUEnable(true)
     m_vInfraredList.reserve(1800);
     m_vDepthList.reserve(1800);
     m_vColorList.reserve(1800);
+
+	std::string strWidth = getIni("setting.ini", "KINECT", "rgb_width");
+	std::string strHeight = getIni("setting.ini", "KINECT", "rgb_height");
+	
+	m_iRGBwidth = std::stoi(strWidth);
+	m_iRGBheight = std::stoi(strHeight);
+
 }
 
 
@@ -1369,8 +1376,10 @@ HRESULT CKinectV2Recorder::SaveToPNG(BYTE* pBitmapBits, LONG lWidth, LONG lHeigh
 	cv::Mat image_ori = cv::Mat(lHeight, lWidth, CV_8UC3, pBitmapBits);
 	//Mat image;
 	//cv::resize(image_ori, image, cv::Size(640, 480));
+	
+	//cv::Rect myROI((cColorWidth / 2) - (640/2), (cColorHeight/2)-(480/2), 640, 480);
+	cv::Rect myROI((cColorWidth / 2) - (m_iRGBwidth / 2), (cColorHeight / 2) - (m_iRGBheight / 2), m_iRGBwidth, m_iRGBheight);
 
-	cv::Rect myROI((cColorWidth / 2) - (640/2), (cColorHeight/2)-(480/2), 640, 480);
 	cv::Mat croppedImage = image_ori(myROI);
 
 	cv::Mat image;

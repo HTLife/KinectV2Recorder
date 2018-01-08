@@ -194,6 +194,8 @@ private:
 	std::mutex              mtx;           // mutex for critical section
 	FILE*			        m_myfile;
 	bool                    m_bIMUEnable;
+	int                     m_iRGBwidth;
+	int                     m_iRGBheight;
 
     /// <summary>
     /// Main processing function

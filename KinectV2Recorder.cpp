@@ -98,7 +98,8 @@ m_tSaveThread(),
 m_bStopThread(false),
 m_tSaveThreadIMU(),
 m_bStopThreadIMU(false),
-m_myfile(NULL)
+m_myfile(NULL),
+m_bIMUEnable(true)
 {
     LARGE_INTEGER qpf = { 0 };
     if (QueryPerformanceFrequency(&qpf))
@@ -258,7 +259,28 @@ int CKinectV2Recorder::Run(HINSTANCE hInstance, int nCmdShow)
 
     // Show window
     ShowWindow(hWndApp, nCmdShow);
-	StartThreadIMU();
+
+	std::string strEnable = getIni("setting.ini", "IMU", "enable");
+	if (strEnable == "1")
+	{
+		m_bIMUEnable = true;
+	}
+	else
+	{
+		m_bIMUEnable = false;
+		WCHAR a[128];
+		GetWindowText(hWndApp, a, sizeof(a));
+		wchar_t b[] = L" (IMU disabled)";
+		wchar_t* c;
+		c = wcscat(a, b);
+		SetWindowText(hWndApp, c);
+	}
+
+	if (m_bIMUEnable)
+	{
+		StartThreadIMU();
+	}
+
 
     // Main message loop
     while (WM_QUIT != msg.message)
@@ -691,8 +713,11 @@ void CKinectV2Recorder::ProcessUI(WPARAM wParam, LPARAM)
 #endif
             ResetRecordParameters();
 
-			fclose(m_myfile);
-			m_myfile = NULL;
+			if (m_bIMUEnable == true)
+			{
+				fclose(m_myfile);
+				m_myfile = NULL;
+			}
         }
         else
         {
@@ -1617,19 +1642,22 @@ void CKinectV2Recorder::SaveRecordImages()
 
         if (bColorWrite)
         {
-			// Write IMU data
-			WCHAR szSavePathIMU[MAX_PATH];
-			StringCchPrintfW(szSavePathIMU, _countof(szSavePathIMU), L"%s\\imu", m_cSaveFolder);
-			if (!IsDirectoryExists(szSavePathIMU))
+			if (m_bIMUEnable == true)
 			{
-				CreateDirectory(szSavePathIMU, NULL);
-			}
-			std::wstring ws(szSavePathIMU);
-			std::string strPath(ws.begin(), ws.end());
-			if (m_myfile == NULL)
-			{
-				std::string imuFilePath = strPath + "\\imu.txt";
-				m_myfile = fopen(imuFilePath.c_str(), "w+");
+				// Write IMU data
+				WCHAR szSavePathIMU[MAX_PATH];
+				StringCchPrintfW(szSavePathIMU, _countof(szSavePathIMU), L"%s\\imu", m_cSaveFolder);
+				if (!IsDirectoryExists(szSavePathIMU))
+				{
+					CreateDirectory(szSavePathIMU, NULL);
+				}
+				std::wstring ws(szSavePathIMU);
+				std::string strPath(ws.begin(), ws.end());
+				if (m_myfile == NULL)
+				{
+					std::string imuFilePath = strPath + "\\imu.txt";
+					m_myfile = fopen(imuFilePath.c_str(), "w+");
+				}
 			}
 
             WCHAR szSavePath[MAX_PATH];
@@ -1645,24 +1673,26 @@ void CKinectV2Recorder::SaveRecordImages()
 			sprintf(buffer, "%011.6f", nTime / 10000000.);
 			std::string strTime(buffer);
 			
-
-			std::vector<double> IMUdata;
-			mtx.lock();
-			IMUdata.assign(m_IMUdata.begin(), m_IMUdata.end());
-			mtx.unlock();
-			
-			assert(IMUData.size() == 6);
-			if (IMUdata.size() != 6)
+			if (m_bIMUEnable == true)
 			{
-				MessageBox(NULL,
-					L"IMU incoming data incorrect.  Try to setup MIP monitor and press the blue 'play' button.",
-					L"Error",
-					MB_OK | MB_ICONERROR
-				);
-				exit(1);
+				std::vector<double> IMUdata;
+				mtx.lock();
+				IMUdata.assign(m_IMUdata.begin(), m_IMUdata.end());
+				mtx.unlock();
+			
+			
+				assert(IMUdata.size() == 6);
+				if (IMUdata.size() != 6)
+				{
+					MessageBox(NULL,
+						L"IMU incoming data incorrect.  Try to setup MIP monitor and press the blue 'play' button.",
+						L"Error",
+						MB_OK | MB_ICONERROR
+					);
+					exit(1);
+				}
+				writeCSV(m_myfile, strTime, IMUdata);
 			}
-			writeCSV(m_myfile, strTime, IMUdata);
-
 #ifdef COLOR_BMP
             StringCchPrintfW(szSavePath, _countof(szSavePath), L"%s\\%011.6f.bmp", szSavePath, nTime / 10000000.);
             SaveToBMP(reinterpret_cast<BYTE*>(m_qColorFrameQueue.front()), cColorWidth, cColorHeight, sizeof(RGBTRIPLE)* 8, szSavePath);
@@ -1689,22 +1719,39 @@ void CKinectV2Recorder::SaveRecordImages()
 /// </summary>
 void CKinectV2Recorder::GetIMUData()
 {
-	std::wstring stemp = s2ws(getIni("setting.ini", "IMU", "comport"));
-	LPCWSTR iniContent = stemp.c_str();
+	std::string strEnable = getIni("setting.ini", "IMU", "enable");
+	if (strEnable == "1")
+	{
+		m_bIMUEnable = true;
+	}
+	else
+	{
+		m_bIMUEnable = false;
+		return;
+	}
+	//TODO: change these constants to match your setup
+	//std::string COM_PORT = "COM3";
+	std::string strCOM_Port = getIni("setting.ini", "IMU", "comport");
 
+	// Print out message
+	std::wstring stemp = s2ws(strCOM_Port);
+	LPCWSTR iniContent = stemp.c_str();
 	MessageBox(NULL,
 		iniContent,//L"Frame dropping occured...\n",
 		L"IMU info load from setting.ini",
-		MB_OK 
+		MB_OK
 	);
 
-	//TODO: change these constants to match your setup
-	//std::string COM_PORT = "COM3";
-	std::string COM_PORT = getIni("setting.ini", "IMU", "comport");
+	if (strCOM_Port == "")
+	{
+		m_bIMUEnable = false;
+		return;
+	}
+
 	try
 	{
 		//create a SerialConnection with the COM port
-		mscl::Connection connection = mscl::Connection::Serial(COM_PORT);
+		mscl::Connection connection = mscl::Connection::Serial(strCOM_Port);
 
 		//create an InertialNode with the connection
 		mscl::InertialNode node(connection);

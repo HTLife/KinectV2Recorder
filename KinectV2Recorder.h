@@ -193,6 +193,7 @@ private:
 	std::vector<double>     m_IMUdata;
 	std::mutex              mtx;           // mutex for critical section
 	FILE*			        m_myfile;
+	bool                    m_bIMUEnable;
 
     /// <summary>
     /// Main processing function

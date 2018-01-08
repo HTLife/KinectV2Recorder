@@ -119,16 +119,20 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\library\MSCL\C++\include;C:\library\opencv\build\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\local\boost_1_64_0;C:\library\MSCL\C++\include;C:\library\opencv\build\include</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EntryPointSymbol>
       </EntryPointSymbol>
-      <AdditionalDependencies>MSCL.lib;opencv_world340d.lib;kinect20.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\library\MSCL\C++\lib\x64\$(Configuration);C:\library\opencv\build\x64\vc14\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>boost_program_options-vc141-mt-gd-1_64.lib;libcrypto64MTd.lib;libssl64MTd.lib;boost_system-vc141-mt-gd-1_64.lib;MSCL.lib;opencv_world340d.lib;kinect20.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\OpenSSL-Win64\lib\VC;C:\local\boost_1_64_0\lib64-msvc-14.1;C:\library\MSCL\C++\lib\x64\$(Configuration);C:\library\opencv\build\x64\vc14\lib</AdditionalLibraryDirectories>
     </Link>
+    <PreBuildEvent>
+      <Command>COPY $(SolutionDir)setting.ini $(intermediateOutputPath)setting.ini</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -163,7 +167,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EntryPointSymbol>
       </EntryPointSymbol>
-      <AdditionalDependencies>boost_program_options-vc141-mt-1_64.lib;libcrypto64MTd.lib;libssl64MTd.lib;boost_system-vc141-mt-1_64.lib;MSCL.lib;opencv_world340.lib;kinect20.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>boost_program_options-vc141-mt-1_64.lib;libcrypto64MT.lib;libssl64MT.lib;boost_system-vc141-mt-1_64.lib;MSCL.lib;opencv_world340.lib;kinect20.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\OpenSSL-Win64\lib\VC;C:\local\boost_1_64_0\lib64-msvc-14.1;C:\library\MSCL\C++\lib\x64\$(Configuration);C:\library\opencv\build\x64\vc14\lib</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>

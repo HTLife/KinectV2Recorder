@@ -1988,7 +1988,7 @@ void CKinectV2Recorder::getTimeString(WCHAR *wstr)
 {
 	time_t now = time(0);
 	tm *ltm = localtime(&now);
-	char buffer[50];
+	char buffer[200];
 	int year = 1990 + ltm->tm_year;
 	int month = ltm->tm_mon + 1;
 	int day = ltm->tm_mday;
